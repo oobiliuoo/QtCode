@@ -29,13 +29,13 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //resize_demo();
 
-    //flip_demo();
+    flip_demo();
 
     //rotate_demo();
 
    // video_demo();
 
-    histogram_demo();
+   // histogram_demo();
 
 }
 
