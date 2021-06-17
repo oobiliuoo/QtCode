@@ -29,14 +29,25 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //resize_demo();
 
-    flip_demo();
+    //flip_demo();
 
     //rotate_demo();
 
    // video_demo();
 
-   // histogram_demo();
+    //histogram_demo();
 
+   // histogram_eq_demo();
+
+   // blur_demo();
+
+   // gaussian_blur_demo();
+
+   // bifilter_demo();
+
+    //dilate_erode_demo();
+
+    test();
 }
 
 MainWindow::~MainWindow()
@@ -44,9 +55,266 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-void MainWindow::histogram_demo(){
+
+
+void MainWindow::test(){
+
+    // 1 读取图片
+    Mat originalImg = readImage("/home/biliu/Pictures/carnum3.jpg");
+   // imshow("img1", originalImg);
+
+    // 2 彩色图转灰度图
+    Mat grayImg;
+    cvtColor(originalImg,grayImg,COLOR_BGR2GRAY);
+   // imshow("img2", grayImg);
+    // 3 高斯滤波，中值滤波
+    Mat blurImg;
+    // 3.1 高斯滤波
+    GaussianBlur(grayImg,blurImg,Size(3,3),0,0,BORDER_DEFAULT);
+   // imshow("img3", blurImg);
+    // 3.2 中值滤波
+    medianBlur(blurImg,blurImg,5);
+   // imshow("img4", blurImg);
+    // 4 边缘化检测
+    Mat sobelImg;
+    Sobel(blurImg,sobelImg,CV_16S,1,0,3);
+   // imshow("img5", sobelImg);
+
+    convertScaleAbs(sobelImg,sobelImg);
+
+    imshow("img6", sobelImg);
+
+    // 5 二值化操作
+    Mat binImg;
+    threshold(sobelImg,binImg,150,255,THRESH_BINARY);
+    imshow("img7", binImg);
+    // 6 形态学处理
+
+    Mat shapeImg;
+    Mat element1 = getStructuringElement(MORPH_RECT,Size(9,1));
+    Mat element2 = getStructuringElement(MORPH_RECT,Size(9,7));
+    // 膨胀一次，让轮廓突出
+    dilate(binImg,shapeImg,element1,Point(),1);
+    // 腐蚀一次，去掉细小杂点
+    dilate(shapeImg,shapeImg,element2,Point(),1);
+    // 再次膨胀，让轮廓更明显
+    dilate(shapeImg,shapeImg,element1,Point(),3);
+    imshow("img8", shapeImg);
+
+
+    std::vector<std::vector<Point>> contours;
+    findContours(shapeImg,contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
+    Mat temp;
+    originalImg.copyTo(temp);
+    drawContours(temp,contours,-1,Scalar(0,0,255),5);
+    imshow("img9",temp);
+
+
+
+    //----------------------------------------------------------------------
+    /*
+    Mat OriginalImg ;
+    OriginalImg = imread("/home/biliu/Pictures/carnum3.jpg", IMREAD_COLOR);//读取原始彩色图像
+        if (OriginalImg.empty())  //判断图像对否读取成功
+        {
+            std::cout << "错误!读取图像失败\n";
+            return ;
+        }
+   // imshow("img", OriginalImg); //显示原始图像
+    std::cout << "Width:" << OriginalImg.rows << "\tHeight:" << OriginalImg.cols << std::endl;//打印图像长宽
+
+    Mat ResizeImg;
+    OriginalImg.copyTo(ResizeImg);
+    if (OriginalImg.cols > 640)
+        cv::resize(OriginalImg, ResizeImg, Size(640, 640* OriginalImg.rows / OriginalImg.cols));
+
+   // imshow("img2", ResizeImg);
+
+    Mat GaussImg;
+    GaussianBlur(ResizeImg,GaussImg,Size(3,3),0);
+
+   // imshow("img3", GaussImg);
+
+    Mat median;
+    medianBlur(GaussImg,median, 5);
+   // imshow("img4", median);
+
+    Mat sobelImg;
+    Sobel(median,sobelImg,CV_8U,1,0);
+   // imshow("img5", sobelImg);
+
+    Mat thresholdImg;
+    cvtColor(sobelImg,sobelImg,COLOR_BGR2GRAY);
+    threshold(sobelImg,thresholdImg,170,255,THRESH_BINARY);
+    imshow("img6", thresholdImg);
+
+
+    Mat element1 = getStructuringElement(MORPH_RECT,Size(3,3));
+    Mat element2 = getStructuringElement(MORPH_RECT,Size(9,7));
+
+    Mat dilateImg1,dilateImg2,erodeImg;
+
+    // 膨胀
+    //dilate(thresholdImg,dilateImg1,element2,Point(-1,-1),1);
+    // 腐蚀
+    //erode(dilateImg1,erodeImg,element1,Point(-1,-1),1);
+    //erode(thresholdImg,erodeImg,element1,Point(-1,-1),1);
+
+    //dilate(erodeImg,dilateImg2,element2,Point(-1,-1),3);
+
+    Mat element = getStructuringElement(MORPH_RECT, Size(3, 3)); //设置形态学处理窗的大小
+    dilate(thresholdImg, thresholdImg, element);     //进行多次膨胀操作
+    dilate(thresholdImg, thresholdImg, element);
+    dilate(thresholdImg, thresholdImg, element);
+
+    erode(thresholdImg, thresholdImg, element);      //进行多次腐蚀操作
+    erode(thresholdImg, thresholdImg, element);
+    erode(thresholdImg, thresholdImg, element);
+
+
+
+    imshow("img7", thresholdImg);
+
+    */
+}
+
+int MainWindow::OTSU(Mat &srcImage)
+{
+    int nRows = srcImage.rows;
+    int nCols = srcImage.cols;
+
+    int threshold = 0;
+    double max = 0.0;
+    double AvePix[256];
+    int nSumPix[256];
+    double nProDis[256];
+    double nSumProDis[256];
+
+    for (int i = 0; i < 256; i++)
+    {
+        AvePix[i] = 0.0;
+        nSumPix[i] = 0;
+        nProDis[i] = 0.0;
+        nSumProDis[i] = 0.0;
+    }
+
+    for (int i = 0; i < nRows; i++)
+    {
+        for (int j = 0; j < nCols; j++)
+        {
+            nSumPix[(int)srcImage.at<uchar>(i, j)]++;
+        }
+    }
+
+    for (int i = 0; i < 256; i++)
+    {
+        nProDis[i] = (double)nSumPix[i] / (nRows*nCols);
+
+    }
+
+
+    AvePix[0] = 0;
+    nSumProDis[0] = nProDis[0];
+
+
+    for (int i = 1; i < 256; i++)
+    {
+        nSumProDis[i] = nSumProDis[i - 1] + nProDis[i];
+        AvePix[i] = AvePix[i - 1] + i*nProDis[i];
+    }
+
+    double mean = AvePix[255];
+
+
+    for (int k = 1; k < 256; k++)
+    {
+        double PA = nSumProDis[k];
+        double PB = 1 - nSumProDis[k];
+        double value = 0.0;
+        if (fabs(PA) > 0.001 && fabs(PB) > 0.001)
+        {
+            double MA = AvePix[k];
+            double MB = (mean - PA*MA)/PB;
+            value = (double)(PA * PB * pow((MA - MB), 2));
+            //或者这样value = (double)(PA * PB * pow((MA-MB),2));//类间方差
+            //pow(PA,1)* pow((MA - mean),2) + pow(PB,1)* pow((MB - mean),2)
+            if (value > max)
+            {
+                max = value;
+                threshold = k;
+            }
+        }
+    }
+    std::cout<<threshold;
+    return threshold;
+}
+
+// 膨胀与腐蚀
+void MainWindow::dilate_erode_demo(){
+
+    Mat image = readImage(cv::String("/home/biliu/Pictures/carnum2.png"));
+    Mat dst;
+    Mat element = getStructuringElement(MORPH_RECT,Size(9,1));
+
+    // 膨胀
+    dilate(image,image,element);
+    // 腐蚀
+    erode(image,image,element);
+
+
+    imshow("erode",image);
+}
+
+// 双边模糊
+void MainWindow::bifilter_demo(){
+
+    Mat image = readImage(cv::String("/home/biliu/Pictures/carnum2.png"));
+
+    Mat dst;
+    bilateralFilter(image,dst,0,100,10);
+    imshow("dst",dst);
+
+}
+
+// 高斯模糊
+void MainWindow::gaussian_blur_demo(){
 
     Mat image = readImage(cv::String("/home/biliu/Pictures/greenperson.png"));
+
+    Mat dst;
+    GaussianBlur(image,dst,Size(0,0),15);
+    imshow("dst",dst);
+}
+
+
+// 图像模糊
+void MainWindow::blur_demo(){
+
+    Mat image = readImage(cv::String("/home/biliu/Pictures/greenperson.png"));
+
+    Mat dst;
+    blur(image,dst,Size(15,15),Point(-1,-1));
+    imshow("blur",dst);
+}
+
+// 直方图均衡化
+void MainWindow::histogram_eq_demo(){
+
+    Mat image = readImage(cv::String("/home/biliu/Pictures/greenperson.png"));
+
+    Mat gray;
+    cvtColor(image,gray,COLOR_BGR2GRAY);
+    imshow("gray",gray);
+    Mat dst;
+    equalizeHist(gray,dst);
+    imshow("dst",dst);
+
+}
+
+// 图像直方图
+void MainWindow::histogram_demo(){
+
+    Mat image = readImage(cv::String("/home/biliu/Pictures/carnum3.jpg"));
 
     // 三通道分离
     std::vector<Mat> bgr_plane;
@@ -476,3 +744,4 @@ void MainWindow::showImage(QLabel* label,QImage img){
     label->setPixmap(QPixmap::fromImage(img));
     label->setScaledContents(true);
 }
+

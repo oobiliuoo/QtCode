@@ -31,8 +31,15 @@ public:
     void rotate_demo();
     void video_demo();
     void histogram_demo();
+    void histogram_eq_demo();
+    void blur_demo();
+    void gaussian_blur_demo();
+    void bifilter_demo();
+    void dilate_erode_demo();
 
+    void test();
 
+    int OTSU(cv::Mat &srcImage);
     cv::Mat readImage(const cv::String& file_path);
     QImage MatToQImage(const cv::Mat& mat);
     void showImage(QLabel* label, QImage img);
