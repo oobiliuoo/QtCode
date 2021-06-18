@@ -56,13 +56,14 @@ MainWindow::~MainWindow()
 }
 
 
-
 void MainWindow::test(){
 
     // 1 读取图片
     Mat originalImg = readImage("/home/biliu/Pictures/carnum3.jpg");
    // imshow("img1", originalImg);
 
+    if (originalImg.cols > 640)
+            cv::resize(originalImg, originalImg, Size(640, 640 * originalImg.rows / originalImg.cols));
     // 2 彩色图转灰度图
     Mat grayImg;
     cvtColor(originalImg,grayImg,COLOR_BGR2GRAY);
@@ -70,26 +71,38 @@ void MainWindow::test(){
     // 3 高斯滤波，中值滤波
     Mat blurImg;
     // 3.1 高斯滤波
-    GaussianBlur(grayImg,blurImg,Size(3,3),0,0,BORDER_DEFAULT);
-   // imshow("img3", blurImg);
+    //GaussianBlur(grayImg,blurImg,Size(3,3),0,0,BORDER_DEFAULT);
+
+
+    //imshow("img3", blurImg);
     // 3.2 中值滤波
-    medianBlur(blurImg,blurImg,5);
-   // imshow("img4", blurImg);
+    medianBlur(grayImg,blurImg,5);
+    //imshow("img4", blurImg);
+
     // 4 边缘化检测
     Mat sobelImg;
     Sobel(blurImg,sobelImg,CV_16S,1,0,3);
    // imshow("img5", sobelImg);
-
     convertScaleAbs(sobelImg,sobelImg);
 
-    imshow("img6", sobelImg);
+    /*
+    Mat sobelyImg;
+    Sobel(blurImg,sobelyImg,CV_16S,0,1,3);
+    convertScaleAbs(sobelyImg,sobelyImg);
+    Mat sobelImg;
+    addWeighted(sobelxImg,0.5,sobelyImg,0.5,0,sobelImg);
+*/
+
+   // imshow("img6", sobelImg);
 
     // 5 二值化操作
     Mat binImg;
-    threshold(sobelImg,binImg,150,255,THRESH_BINARY);
-    imshow("img7", binImg);
+    threshold(sobelImg,binImg,100,255,THRESH_BINARY);
+    //imshow("img7", binImg);
     // 6 形态学处理
 
+
+    // 方式一
     Mat shapeImg;
     Mat element1 = getStructuringElement(MORPH_RECT,Size(9,1));
     Mat element2 = getStructuringElement(MORPH_RECT,Size(9,7));
@@ -102,6 +115,36 @@ void MainWindow::test(){
     imshow("img8", shapeImg);
 
 
+/*
+    // 方式二
+    Mat element  = getStructuringElement(MORPH_RECT,Size(5,5));
+    Mat element2  = getStructuringElement(MORPH_RECT,Size(3,3));
+    Mat shapeImg;
+
+    morphologyEx(binImg,shapeImg,MORPH_CLOSE,element);
+   // imshow("c1", shapeImg);
+
+    dilate(shapeImg,shapeImg,element,Point(),1);
+    //imshow("c2", shapeImg);
+
+    morphologyEx(binImg,shapeImg,MORPH_CLOSE,element2);
+    //imshow("c3", shapeImg);
+
+    dilate(shapeImg,shapeImg,element2,Point(),1);
+    dilate(shapeImg,shapeImg,element2,Point(),1);
+    //imshow("c4", shapeImg);
+
+    morphologyEx(binImg,shapeImg,MORPH_OPEN,element2);
+    imshow("c5", shapeImg);
+*/
+
+    /*
+    Mat element  = getStructuringElement(MORPH_RECT,Size(17,5));
+    Mat shapeImg;
+    morphologyEx(binImg,shapeImg,MORPH_CLOSE,element);
+    imshow("c1", shapeImg);
+*/
+
     std::vector<std::vector<Point>> contours;
     findContours(shapeImg,contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
     Mat temp;
@@ -110,72 +153,86 @@ void MainWindow::test(){
     imshow("img9",temp);
 
 
+    // 车牌提取
+    // 汽车车牌区域的每个字符宽度为45 mm，字符高度为90 mm，间隔符宽10 mm，字符间隔为12 mm，整个车牌区域的宽高比为44/14
 
-    //----------------------------------------------------------------------
-    /*
-    Mat OriginalImg ;
-    OriginalImg = imread("/home/biliu/Pictures/carnum3.jpg", IMREAD_COLOR);//读取原始彩色图像
-        if (OriginalImg.empty())  //判断图像对否读取成功
-        {
-            std::cout << "错误!读取图像失败\n";
-            return ;
+    std::cout<<"size:"<<contours.size();
+
+    Mat temp2;
+    originalImg.copyTo(temp2);
+    int i = 0;
+    std::vector<std::vector<Point>>::iterator it;
+    for(it=contours.begin();it!=contours.end();it++)
+    {
+/*
+        drawContours(temp2,contours,i,Scalar(0,0,255),5);
+        imshow("a",temp2);
+
+        while(true){
+         int c = waitKey(1000);
+         if(c == 27) break;
         }
-   // imshow("img", OriginalImg); //显示原始图像
-    std::cout << "Width:" << OriginalImg.rows << "\tHeight:" << OriginalImg.cols << std::endl;//打印图像长宽
+*/
+        double area = contourArea(*it);
+        double length = arcLength(*it,true);
 
-    Mat ResizeImg;
-    OriginalImg.copyTo(ResizeImg);
-    if (OriginalImg.cols > 640)
-        cv::resize(OriginalImg, ResizeImg, Size(640, 640* OriginalImg.rows / OriginalImg.cols));
+        if(area>800&&area<50000){
 
-   // imshow("img2", ResizeImg);
+        std::cout<<"current i: "<<i<<" area"<<area<<std::endl;
 
-    Mat GaussImg;
-    GaussianBlur(ResizeImg,GaussImg,Size(3,3),0);
-
-   // imshow("img3", GaussImg);
-
-    Mat median;
-    medianBlur(GaussImg,median, 5);
-   // imshow("img4", median);
-
-    Mat sobelImg;
-    Sobel(median,sobelImg,CV_8U,1,0);
-   // imshow("img5", sobelImg);
-
-    Mat thresholdImg;
-    cvtColor(sobelImg,sobelImg,COLOR_BGR2GRAY);
-    threshold(sobelImg,thresholdImg,170,255,THRESH_BINARY);
-    imshow("img6", thresholdImg);
+            RotatedRect mRect = minAreaRect(*it);
 
 
-    Mat element1 = getStructuringElement(MORPH_RECT,Size(3,3));
-    Mat element2 = getStructuringElement(MORPH_RECT,Size(9,7));
+           // drawContours(temp2,contours,i,Scalar(0,0,255),5);
+            // 获取长宽
 
-    Mat dilateImg1,dilateImg2,erodeImg;
+            Point2f mPoints[4];// 左下，左上，右上，右下
+            mRect.points(mPoints);
 
-    // 膨胀
-    //dilate(thresholdImg,dilateImg1,element2,Point(-1,-1),1);
-    // 腐蚀
-    //erode(dilateImg1,erodeImg,element1,Point(-1,-1),1);
-    //erode(thresholdImg,erodeImg,element1,Point(-1,-1),1);
+            Size2f s = mRect.size;
+            int height = s.height;
+            int weight = s.width;
+            std::cout<<"H:"<<height<<" W:"<<weight<<std::endl;
 
-    //dilate(erodeImg,dilateImg2,element2,Point(-1,-1),3);
+            float errRoit = 0.9;
+            float accept = 3.142857;
+            float errEara = 0.5;
 
-    Mat element = getStructuringElement(MORPH_RECT, Size(3, 3)); //设置形态学处理窗的大小
-    dilate(thresholdImg, thresholdImg, element);     //进行多次膨胀操作
-    dilate(thresholdImg, thresholdImg, element);
-    dilate(thresholdImg, thresholdImg, element);
+            float minAccept = accept - errRoit;
+            float maxAccept = accept + errRoit;
 
-    erode(thresholdImg, thresholdImg, element);      //进行多次腐蚀操作
-    erode(thresholdImg, thresholdImg, element);
-    erode(thresholdImg, thresholdImg, element);
+            float mAccept = 0;
+            if(height > weight)
+                mAccept = (float) height / weight;
+            else
+                mAccept = (float) weight / height;
+
+            int rectEara = height * weight;
+            float earaRoit = area/rectEara;
+
+            std::cout<<"mAccept:"<<mAccept<<std::endl;
+            std::cout<<"earaRoit:"<<earaRoit<<std::endl;
+            if(mAccept>minAccept && mAccept < maxAccept && earaRoit > 1 - errEara && earaRoit < 1 + errEara
+                   && area > 2000 && area<5000){
+                std::cout<<"AAAAAAAAAAAAAAAA----draw :"<<i<<std::endl;
+                for (int i = 0; i < 4; i++)
+                            line(temp2, mPoints[i], mPoints[(i + 1) % 4], Scalar(0, 0,255), 1);
+
+                imshow("imga",temp2);
+            std::cout<<"---------------------------------"<<std::endl;
+            }
+
+
+        }
+
+       i++;
+
+    }
 
 
 
-    imshow("img7", thresholdImg);
 
-    */
+
 }
 
 int MainWindow::OTSU(Mat &srcImage)
