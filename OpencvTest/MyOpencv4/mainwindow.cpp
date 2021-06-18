@@ -101,7 +101,7 @@ void MainWindow::test(){
     //imshow("img7", binImg);
     // 6 形态学处理
 
-
+/*
     // 方式一
     Mat shapeImg;
     Mat element1 = getStructuringElement(MORPH_RECT,Size(9,1));
@@ -113,7 +113,7 @@ void MainWindow::test(){
     // 再次膨胀，让轮廓更明显
     dilate(shapeImg,shapeImg,element1,Point(),3);
     imshow("img8", shapeImg);
-
+*/
 
 /*
     // 方式二
@@ -138,12 +138,12 @@ void MainWindow::test(){
     imshow("c5", shapeImg);
 */
 
-    /*
+
     Mat element  = getStructuringElement(MORPH_RECT,Size(17,5));
     Mat shapeImg;
     morphologyEx(binImg,shapeImg,MORPH_CLOSE,element);
     imshow("c1", shapeImg);
-*/
+
 
     std::vector<std::vector<Point>> contours;
     findContours(shapeImg,contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
