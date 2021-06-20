@@ -2,7 +2,7 @@
 #include "ui_mainwindow.h"
 #include "QDebug"
 using namespace cv;
-
+using namespace std;
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -19,7 +19,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //inrange_demo();
 
-    //pixel_statistic_demo();
+    // pixel_statistic_demo();
 
     //drawing_demo();
 
@@ -47,13 +47,15 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //dilate_erode_demo();
 
-    test();
+    //test();
+
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
 }
+
 
 
 void MainWindow::test(){
@@ -100,7 +102,6 @@ void MainWindow::test(){
     threshold(sobelImg,binImg,100,255,THRESH_BINARY);
     //imshow("img7", binImg);
     // 6 形态学处理
-
 /*
     // 方式一
     Mat shapeImg;
@@ -567,7 +568,7 @@ void MainWindow::drawing_demo(){
 // 获取最大最小值，平均值方差
 void MainWindow::pixel_statistic_demo(){
 
-    Mat image = readImage(cv::String("/home/biliu/Pictures/greenperson.png"));
+    Mat image = readImage(cv::String("/home/biliu/Pictures/carnum2.png"));
 
     // 像素最小最大值
     double minv,maxv;
