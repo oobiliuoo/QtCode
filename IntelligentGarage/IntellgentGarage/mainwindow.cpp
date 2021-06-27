@@ -1,6 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-
+#define MY_DEBUG 1
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -8,22 +8,22 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    // 读取图片
-    this->originImg = imread("../pic/cartest.jpg");
-    imshow("originImg",this->originImg);
+#if MY_DEBUG == 1
 
+    // 读取图片
+    this->originImg = imread("../pic/carnum6.jpg");
+    imshow("originImg",this->originImg);
     if (this->originImg.cols != 640)
             cv::resize(this->originImg, this->originImg, Size(640, 640 * this->originImg.rows / this->originImg.cols));
-    /*
-    if (this->originImg.cols < 640)
-            cv::resize(this->originImg, this->originImg, Size(640, 640 * this->originImg.rows / this->originImg.cols));
-    */
-
     Mat srcImg = this->originImg.clone();
-
     test(srcImg);
 
-   // test2();
+#elif MY_DEBUG == 0
+    test2();
+
+#elif MY_DEBUG == 0
+    readVideo();
+#endif
 }
 
 void MainWindow::test2(){
@@ -58,6 +58,42 @@ void MainWindow::test(Mat srcImg){
     mLPR.morphologicalProcessing();
     mLPR.licensePlateExtraction();
 }
+
+
+void MainWindow::readVideo(){
+    // VideoCapture capture(video_path); // 读取某个视频
+    VideoCapture capture;
+    capture.open(0);
+    if(capture.isOpened()){
+        std::cout<<"vedio is open";
+    }
+    Mat frame;
+    while (true) {
+        // 读一幀
+        capture.read(frame);
+
+        flip(frame,frame,1);
+
+        if(frame.empty()){
+            break;
+        }
+        flip(frame,frame,1);
+        imshow("frame",frame);
+        // TODO: do something
+
+
+        this->originImg = frame.clone();
+        if (this->originImg.cols != 640)
+                cv::resize(this->originImg, this->originImg, Size(640, 640 * this->originImg.rows / this->originImg.cols));
+        Mat srcImg = this->originImg.clone();
+        test(srcImg);
+        waitKey(10);
+    }
+
+    // 释放资源
+    capture.release();
+}
+
 
 MainWindow::~MainWindow()
 {

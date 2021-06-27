@@ -3,6 +3,15 @@
 #include "QDebug"
 using namespace cv;
 using namespace std;
+
+typedef pair<int, double> PAIR;
+struct CmpByValue {
+  bool operator()(const PAIR& lhs, const PAIR& rhs) {
+    return lhs.second > rhs.second;
+  }
+};
+
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -33,11 +42,11 @@ MainWindow::MainWindow(QWidget *parent) :
 
     //rotate_demo();
 
-   // video_demo();
+    // video_demo();
 
-    //histogram_demo();
+    histogram_demo();
 
-   // histogram_eq_demo();
+    histogram_eq_demo();
 
    // blur_demo();
 
@@ -48,6 +57,8 @@ MainWindow::MainWindow(QWidget *parent) :
     //dilate_erode_demo();
 
     //test();
+    //test2();
+  //  test3();
 
 }
 
@@ -57,6 +68,173 @@ MainWindow::~MainWindow()
 }
 
 
+void MainWindow::test3(){
+
+    // /home/biliu/Pictures/picVideo.png /home/biliu/Pictures/carnum10.jpg
+    Mat img = imread("/home/biliu/Pictures/carnum1.jpg", IMREAD_COLOR);
+    if (img.cols != 640)
+            cv::resize(img, img, Size(640, 640 * img.rows / img.cols));
+    Mat gray;
+    cvtColor(img,gray,COLOR_BGR2GRAY);
+    //imshow("gary",gray);
+
+    Mat gray2;
+    bilateralFilter(gray,gray2,13,15,15);
+    //imshow("gary2",gray2);
+
+    Mat sobelImg;
+    Sobel(gray2,sobelImg,CV_16S,1,0,3);
+    convertScaleAbs(sobelImg,sobelImg);
+    //imshow("sobelImg",sobelImg);
+
+    Mat binImg;
+    threshold(sobelImg,binImg,OTSU(sobelImg),255,THRESH_BINARY);
+    //imshow("threshold", binImg);
+
+    Mat morpImg;
+    Mat element  = getStructuringElement(MORPH_RECT,Size(17,5));
+    morphologyEx(binImg,morpImg,MORPH_CLOSE,element);
+    imshow("morp", morpImg);
+
+    std::vector<std::vector<Point>> contours;
+    findContours(morpImg.clone(),contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
+
+    std::map<int,double> contours_areas;
+
+    for(int i = 0; i< contours.size(); i++){
+        double area = contourArea(contours[i]);
+        if(area > 800 && area < 50000)
+            contours_areas.insert(make_pair(i,area));
+    }
+
+    vector<PAIR> index_area_vec(contours_areas.begin(), contours_areas.end());
+    sort(index_area_vec.begin(), index_area_vec.end(), CmpByValue());
+
+
+    const float LENGTH_WIDTH_RATIO = 3.142857; // 标准长宽比
+    const float ERROR_RATE = 1;       // 浮动范围
+    float errEara = 0.5;
+    float minLWR = LENGTH_WIDTH_RATIO - ERROR_RATE;  // 最小长宽比
+    float maxLWR = LENGTH_WIDTH_RATIO + ERROR_RATE;  // 最大长宽比
+
+    double area = 0;    //轮廓面积
+    int height = 0;     //外接矩高
+    int weight = 0;     //外接矩长
+    float mLWR = 0;     //当前长宽比
+    int mArea = 0;      //外接距面积
+    float rectRate = 1; //矩形率
+
+
+    for (int i = 0; i != index_area_vec.size(); ++i) {
+
+        //cout<<index_area_vec[i].first<<" "<<index_area_vec[i].second<<endl;
+        // 获取最小外接矩
+        RotatedRect mRect = minAreaRect(contours[index_area_vec[i].first]);
+        // 获取四个角点坐标
+        // 获取长宽
+        Size2f s = mRect.size;
+        height = s.height;
+        weight = s.width;
+        // 获取长宽比
+        if(height > weight)
+            mLWR = (float) height / weight;
+        else
+            mLWR = (float) weight / height;
+        // 矩形面积
+        mArea = height * weight;
+        area = index_area_vec[i].second;
+        rectRate = area/mArea;
+
+
+        if(mLWR>minLWR && mLWR < maxLWR && rectRate > 1 - errEara && rectRate < 1 + errEara
+                ){
+            cout<<"---aaa---- "<<index_area_vec[i].first<<" pass"<<endl;
+            Point2f mPoints[4];// 左下，左上，右上，右下
+            mRect.points(mPoints);
+            Point points[4];
+            for(int i=0;i<4;i++){
+                points[i].x = (int) mPoints[i].x;
+                points[i].y = (int) mPoints[i].y;
+            }
+            Mat temp2 = img.clone();
+            for (int i = 0; i < 4; i++)
+                  line(temp2, mPoints[i], mPoints[(i + 1) % 4], Scalar(0, 0,255), 2);
+
+            imshow("lpe",temp2);
+
+            std::cout<<"current : "<<index_area_vec[i].first<<" area"<<index_area_vec[i].second<<std::endl;
+            std::cout<<"H: "<<height<<" W: "<<weight<<std::endl;
+            std::cout<<"mLWR: "<<mLWR<<std::endl;
+            std::cout<<"rectRate: "<<rectRate<<std::endl;
+            std::cout<<"---------------------------------"<<std::endl;
+        }
+
+
+    }
+
+}
+
+
+void MainWindow::test2(){
+    Mat OriginalImg;
+
+    OriginalImg = imread("/home/biliu/Pictures/picVideo.png", IMREAD_COLOR);//读取原始彩色图像
+    if (OriginalImg.empty())  //判断图像对否读取成功
+    {
+        cout << "错误!读取图像失败\n";
+        return ;
+    }
+    //imshow("originalimg", OriginalImg); //显示原始图像
+    cout << "Width:" << OriginalImg.rows << "\tHeight:" << OriginalImg.cols << endl;//打印长宽
+
+    Mat ResizeImg = OriginalImg.clone();
+    if (OriginalImg.cols != 640)
+        cv::resize(OriginalImg, ResizeImg, Size(640, 640 * OriginalImg.rows / OriginalImg.cols));
+    //imshow("resize", ResizeImg);
+
+    unsigned char pixelB, pixelG, pixelR;  //记录各通道值
+    unsigned char DifMax = 50;             //基于颜色区分的阈值设置
+    unsigned char B = 138, G = 63, R = 23; //各通道的阈值设定，针对与蓝色车牌
+    Mat BinRGBImg = ResizeImg.clone();  //二值化之后的图像
+    int i = 0, j = 0;
+    for (i = 0; i < ResizeImg.rows; i++)   //通过颜色分量将图片进行二值化处理
+    {
+        for (j = 0; j < ResizeImg.cols; j++)
+        {
+            pixelB = ResizeImg.at<Vec3b>(i, j)[0]; //获取图片各个通道的值
+            pixelG = ResizeImg.at<Vec3b>(i, j)[1];
+            pixelR = ResizeImg.at<Vec3b>(i, j)[2];
+
+            if (abs(pixelB - B) < DifMax && abs(pixelG - G) < DifMax && abs(pixelR - R) < DifMax)
+            {                                           //将各个通道的值和各个通道阈值进行比较
+                BinRGBImg.at<Vec3b>(i, j)[0] = 255;     //符合颜色阈值范围内的设置成白色
+                BinRGBImg.at<Vec3b>(i, j)[1] = 255;
+                BinRGBImg.at<Vec3b>(i, j)[2] = 255;
+            }
+            else
+            {
+                BinRGBImg.at<Vec3b>(i, j)[0] = 0;        //不符合颜色阈值范围内的设置为黑色
+                BinRGBImg.at<Vec3b>(i, j)[1] = 0;
+                BinRGBImg.at<Vec3b>(i, j)[2] = 0;
+            }
+        }
+    }
+    imshow("bin", BinRGBImg);        //显示二值化处理之后的图像
+
+    Mat BinOriImg;     //形态学处理结果图像
+    Mat element = getStructuringElement(MORPH_RECT, Size(3, 3)); //设置形态学处理窗的大小
+    dilate(BinRGBImg, BinOriImg, element);     //进行多次膨胀操作
+    dilate(BinOriImg, BinOriImg, element);
+    dilate(BinOriImg, BinOriImg, element);
+
+    erode(BinOriImg, BinOriImg, element);      //进行多次腐蚀操作
+    erode(BinOriImg, BinOriImg, element);
+    erode(BinOriImg, BinOriImg, element);
+    imshow("bin2", BinOriImg);        //显示形态学处理之后的图像
+
+
+
+}
 
 void MainWindow::test(){
 
@@ -372,8 +550,7 @@ void MainWindow::histogram_eq_demo(){
 // 图像直方图
 void MainWindow::histogram_demo(){
 
-    Mat image = readImage(cv::String("/home/biliu/Pictures/carnum3.jpg"));
-
+    Mat image = readImage(cv::String("/home/biliu/Documents/WorkSpace/QtCode/IntelligentGarage/pic/licence5.jpg"));
     // 三通道分离
     std::vector<Mat> bgr_plane;
     split(image,bgr_plane);
@@ -432,12 +609,17 @@ void MainWindow::video_demo(){
         if(frame.empty()){
             break;
         }
+        flip(frame,frame,1);
         imshow("frame",frame);
         // TODO: do something
 
         int c = waitKey(10);
         if(c == 27){// 退出
+
+            imwrite("/home/biliu/Pictures/picVideo.png",frame);
+
             break;
+
         }
 
     }
@@ -568,7 +750,7 @@ void MainWindow::drawing_demo(){
 // 获取最大最小值，平均值方差
 void MainWindow::pixel_statistic_demo(){
 
-    Mat image = readImage(cv::String("/home/biliu/Pictures/carnum2.png"));
+    Mat image = readImage(cv::String("/home/biliu/Pictures/picVideo.png"));
 
     // 像素最小最大值
     double minv,maxv;
