@@ -35,6 +35,11 @@ public:
     // 颜色判断
     bool checkLicenseFromColor(Mat img);
 
+
+    void regionalExtract2(Mat &img);
+
+    void characterExtraction(Mat img);
+
     int OTSU(cv::Mat &srcImage);
     cv::Mat rotate_demo(Mat &image,cv::RotatedRect rRect);
 

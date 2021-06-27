@@ -20,7 +20,8 @@ public:
     void test(cv::Mat);
     void test2();
 
-
+    // 摄像头
+    void readVideo();
 
 
 private:

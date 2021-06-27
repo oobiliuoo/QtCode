@@ -38,6 +38,8 @@ public:
     void dilate_erode_demo();
 
     void test();
+    void test2();
+    void test3();
 
     int OTSU(cv::Mat &srcImage);
     cv::Mat readImage(const cv::String& file_path);

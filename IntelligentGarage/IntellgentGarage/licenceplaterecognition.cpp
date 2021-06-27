@@ -1,8 +1,20 @@
 #include "licenceplaterecognition.h"
 #define SOBEL_TYPE 1
 #define DEBUG_COUT 1
+#define MY_DEBUG 1
 #define SHOW_ALL 0
 #define SHOW_ONE 0
+
+using namespace std;
+
+typedef pair<int, double> PAIR;
+struct CmpByValue {
+  bool operator()(const PAIR& lhs, const PAIR& rhs) {
+    return lhs.second > rhs.second;
+  }
+};
+
+
 
 LicencePlateRecognition::LicencePlateRecognition()
 {
@@ -20,12 +32,30 @@ LicencePlateRecognition::LicencePlateRecognition(Mat img){
 * ---------------------------------------------------------------------------------------------------------
 */
 void LicencePlateRecognition::pictureProcessing(Mat &img){
+
+
+/*
+    imshow("t1",img);
+
+    Mat imageRGB[3];
+    split(img, imageRGB);
+    for (int i = 0; i < 3; i++)
+    {
+        equalizeHist(imageRGB[i], imageRGB[i]);
+    }
+    Mat equalizeHistDist;
+    merge(imageRGB, 3, img);
+
+
+    imshow("t2",img);
+*/
     // 1 彩色图转灰度图
     cvtColor(img,img,COLOR_BGR2GRAY);
+
     // 2 高斯滤波，中值滤波
     // 2.1 高斯滤波
     GaussianBlur(img,img,Size(3,3),0,0,BORDER_DEFAULT);
-    //imshow("Gaussian", img);
+   // imshow("Gaussian", img);
     // 2.2 中值滤波
     medianBlur(img,img,5);
     //imshow("median", img);
@@ -59,7 +89,7 @@ void LicencePlateRecognition::borderDetection(Mat &img ){
     Sobel(img,sobelImg,CV_16S,1,0,3);
     // imshow("img5", img);
     convertScaleAbs(sobelImg,img);
-#elif SOBEL_TYPE == 2
+#elif SOBEL_TYPE == 0
     Mat sobelImg,sobelX,sobelY;
     Sobel(img,sobelImg,CV_16S,1,0,3);
     convertScaleAbs(sobelImg,sobelX);
@@ -71,7 +101,7 @@ void LicencePlateRecognition::borderDetection(Mat &img ){
 #endif
     this->srcImg = img;
     // SHOW_ONE 2
-#if SHOW_ALL == 1 || SHOW_ONE == 2
+#if SHOW_ALL == 1 || SHOW_ONE == 1
     imshow("sobel",img);
 #endif
 }
@@ -94,13 +124,34 @@ void LicencePlateRecognition::borderDetection(){
 */
 void LicencePlateRecognition::morphologicalProcessing(Mat &img){
     // 二值化操作
-    threshold(img,img,125,255,THRESH_BINARY);
+    threshold(img,img,OTSU(img),255,THRESH_BINARY);
     //imshow("img7", img);
     // 形态学处理
-    // 闭运算
+    // 闭运算:
+
     Mat element  = getStructuringElement(MORPH_RECT,Size(17,5));
     morphologyEx(img,img,MORPH_CLOSE,element);
-#if SHOW_ALL == 1 || SHOW_ONE == 1
+    /*
+    Mat element1  = getStructuringElement(MORPH_RECT,Size(3,3));
+    erode(img,img,element1);
+  //  imshow("a0",img);
+
+    Mat element  = getStructuringElement(MORPH_RECT,Size(17,5));
+    morphologyEx(img,img,MORPH_CLOSE,element);
+   // imshow("a1",img);
+   // morphologyEx(img,img,MORPH_OPEN,element);
+    //imshow("a2",img);
+
+
+    dilate(img,img,element);
+   // imshow("a2",img);
+    Mat element2  = getStructuringElement(MORPH_RECT,Size(17,7));
+    morphologyEx(img,img,MORPH_CLOSE,element2);
+
+    Mat element3  = getStructuringElement(MORPH_RECT,Size(17,9));
+    dilate(img,img,element3);
+*/
+#if SHOW_ALL == 1 || SHOW_ONE == 0
     imshow("mp", img);
 #endif
 
@@ -128,14 +179,14 @@ void LicencePlateRecognition::morphologicalProcessing(){
 bool LicencePlateRecognition::checkLicenseFromShape(float mLWR, float rectRate, double area){
 
     const float LENGTH_WIDTH_RATIO = 3.142857; // 标准长宽比
-    const float ERROR_RATE = 1;       // 浮动范围
+    const float ERROR_RATE = 1.5;       // 浮动范围
     float errEara = 0.5;
-    float minLWR = LENGTH_WIDTH_RATIO - ERROR_RATE;  // 最小长宽比
+    float minLWR = LENGTH_WIDTH_RATIO - ERROR_RATE + 0.8;  // 最小长宽比
     float maxLWR = LENGTH_WIDTH_RATIO + ERROR_RATE;  // 最大长宽比
 
 
     if(mLWR>minLWR && mLWR < maxLWR && rectRate > 1 - errEara && rectRate < 1 + errEara
-            && area > 1500 && area<8000){
+            && area > 1500 && area<80000){
         return true;
     }
 
@@ -163,7 +214,7 @@ Mat LicencePlateRecognition::regionalExtract(Mat &img,  RotatedRect rRect){
         points[i].y = (int) mPoints[i].y;
     }
     fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
-    //imshow("mask",mask);
+   // imshow("mask",mask);
     Mat t ;
     img.copyTo(t,mask);
     //imshow("t",t);
@@ -182,10 +233,73 @@ Mat LicencePlateRecognition::regionalExtract(Mat &img,  RotatedRect rRect){
         std::cout<<"rotate"<<std::endl;
         licenceImg =  rotate_demo(t,rRect);
     }
-    //imshow("licenceImg",licenceImg);
+   // imshow("licenceImg",licenceImg);
 
 
     return licenceImg;
+}
+
+
+void LicencePlateRecognition::regionalExtract2(Mat &img){
+    Mat OriginalImg;
+
+    OriginalImg = img.clone();
+    if (OriginalImg.empty())  //判断图像对否读取成功
+    {
+        std::cout << "错误!读取图像失败\n";
+        return ;
+    }
+    //imshow("originalimg", OriginalImg); //显示原始图像
+    std::cout << "Width:" << OriginalImg.rows << "\tHeight:" << OriginalImg.cols << std::endl;//打印长宽
+
+    Mat ResizeImg = OriginalImg.clone();
+    /*
+    Mat ResizeImg;
+    if (OriginalImg.cols != 640)
+        cv::resize(OriginalImg, ResizeImg, Size(640, 640 * OriginalImg.rows / OriginalImg.cols));
+    imshow("resize", ResizeImg);
+*/
+
+    unsigned char pixelB, pixelG, pixelR;  //记录各通道值
+    unsigned char DifMax = 80;             //基于颜色区分的阈值设置
+    unsigned char B = 138, G = 63, R = 23; //各通道的阈值设定，针对与蓝色车牌
+    Mat BinRGBImg = ResizeImg.clone();  //二值化之后的图像
+    int i = 0, j = 0;
+    for (i = 0; i < ResizeImg.rows; i++)   //通过颜色分量将图片进行二值化处理
+    {
+        for (j = 0; j < ResizeImg.cols; j++)
+        {
+            pixelB = ResizeImg.at<Vec3b>(i, j)[0]; //获取图片各个通道的值
+            pixelG = ResizeImg.at<Vec3b>(i, j)[1];
+            pixelR = ResizeImg.at<Vec3b>(i, j)[2];
+
+            if (abs(pixelB - B) < DifMax && abs(pixelG - G) < DifMax && abs(pixelR - R) < DifMax)
+            {                                           //将各个通道的值和各个通道阈值进行比较
+                BinRGBImg.at<Vec3b>(i, j)[0] = 255;     //符合颜色阈值范围内的设置成白色
+                BinRGBImg.at<Vec3b>(i, j)[1] = 255;
+                BinRGBImg.at<Vec3b>(i, j)[2] = 255;
+            }
+            else
+            {
+                BinRGBImg.at<Vec3b>(i, j)[0] = 0;        //不符合颜色阈值范围内的设置为黑色
+                BinRGBImg.at<Vec3b>(i, j)[1] = 0;
+                BinRGBImg.at<Vec3b>(i, j)[2] = 0;
+            }
+        }
+    }
+    imshow("bin", BinRGBImg);        //显示二值化处理之后的图像
+
+    Mat BinOriImg;     //形态学处理结果图像
+    Mat element = getStructuringElement(MORPH_RECT, Size(3, 3)); //设置形态学处理窗的大小
+    dilate(BinRGBImg, BinOriImg, element);     //进行多次膨胀操作
+    dilate(BinOriImg, BinOriImg, element);
+    dilate(BinOriImg, BinOriImg, element);
+
+    erode(BinOriImg, BinOriImg, element);      //进行多次腐蚀操作
+    erode(BinOriImg, BinOriImg, element);
+    erode(BinOriImg, BinOriImg, element);
+    imshow("bin2", BinOriImg);        //显示形态学处理之后的图像
+
 }
 
 /**
@@ -196,6 +310,7 @@ Mat LicencePlateRecognition::regionalExtract(Mat &img,  RotatedRect rRect){
 */
 bool LicencePlateRecognition::checkLicenseFromColor(Mat img){
 
+#if SOBEL_TYPE == 1
     const int BLUE_WHITE_B = 138;
     const int BLUE_WHITE_G = 63;
     const int BLUE_WHITE_R = 23;
@@ -224,18 +339,37 @@ bool LicencePlateRecognition::checkLicenseFromColor(Mat img){
     int mG = abs(pixelG - BLUE_WHITE_G);
     int mR = abs(pixelR - BLUE_WHITE_R);
 
-#if DEBUG_COUT == 1
-    std::cout<<"mean: "<<std::endl;
-    std::cout<<mean<<std::endl;
-    std::cout<<"mb: "<<mB<<std::endl;
-    std::cout<<"mg: "<<mG<<std::endl;
-    std::cout<<"mr: "<<mR<<std::endl;
-    imshow("color check",img);
-#endif
+    if(MY_DEBUG == 1){
+        std::cout<<"mean: "<<std::endl;
+        std::cout<<mean<<std::endl;
+        std::cout<<"mb: "<<mB<<std::endl;
+        std::cout<<"mg: "<<mG<<std::endl;
+        std::cout<<"mr: "<<mR<<std::endl;
+        imshow("color check",img);
+    }
 
     if(mB < ERROR_RANGE && mG < ERROR_RANGE && mR < ERROR_RANGE){
           return true;
     }
+
+#elif SOBEL_TYPE == 0
+
+    const int ERROR_RANGE = 10;
+    const int BLUE_WHITE_GRAY = 128;
+
+    cvtColor(img,img,COLOR_BGR2GRAY);
+    equalizeHist(img,img);
+
+    Mat mean,stddev; // 平均值，方差
+    meanStdDev(img,mean,stddev);
+
+    double pixelGray = mean.at<double>(0,0);
+
+    if(abs(pixelGray - BLUE_WHITE_GRAY) < ERROR_RANGE){
+        return true;
+    }
+
+#endif
     return false;
 }
 
@@ -248,7 +382,8 @@ bool LicencePlateRecognition::checkLicenseFromColor(Mat img){
 Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
 
     Mat temp2 = this->orginImg.clone();
-    Mat licenceImg = this->orginImg.clone();
+    Mat licenceImg;
+
     double area = 0;    //轮廓面积
     int height = 0;     //外接矩高
     int weight = 0;     //外接矩长
@@ -256,6 +391,87 @@ Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
     int mArea = 0;      //外接距面积
     float rectRate = 1; //矩形率
 
+    std::vector<std::vector<Point>> contours;
+    findContours(img,contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
+    std::map<int,double> contours_areas;
+    for(int i = 0; i< contours.size(); i++){
+        double area = contourArea(contours[i]);
+        if(area > 800 && area < 50000)
+            contours_areas.insert(make_pair(i,area));
+    }
+    vector<PAIR> index_area_vec(contours_areas.begin(), contours_areas.end());
+    sort(index_area_vec.begin(), index_area_vec.end(), CmpByValue());
+
+    double last_area = 0;
+    double current_area = 0;
+    int final_index = 0;
+    for (int i = 0; i != index_area_vec.size(); ++i) {
+        //cout<<index_area_vec[i].first<<" "<<index_area_vec[i].second<<endl;
+        // 获取最小外接矩
+        RotatedRect mRect = minAreaRect(contours[index_area_vec[i].first]);
+        // 获取四个角点坐标
+        // 获取长宽
+        Size2f s = mRect.size;
+        height = s.height;
+        weight = s.width;
+        // 获取长宽比
+        if(height > weight)
+            mLWR = (float) height / weight;
+        else
+            mLWR = (float) weight / height;
+        // 矩形面积
+        mArea = height * weight;
+        area = index_area_vec[i].second;
+        rectRate = area/mArea;
+
+        std::cout<<"current : "<<index_area_vec[i].first<<" area"<<index_area_vec[i].second<<std::endl;
+        std::cout<<"H: "<<height<<" W: "<<weight<<std::endl;
+        std::cout<<"mLWR: "<<mLWR<<std::endl;
+        std::cout<<"rectRate: "<<rectRate<<std::endl;
+        std::cout<<"---------------------------------"<<std::endl;
+
+        if(checkLicenseFromShape(mLWR,rectRate,area) ){
+            std::cout<<"**** pass shape check ****"<<index_area_vec[i].first<<std::endl;
+            current_area = index_area_vec[i].second;
+            // 优先选择面积接近6000的
+            if(abs(current_area - 6000) > abs(last_area - 6000)){
+                cout<<"out becease:---last_area---- "<<last_area<<" current_area"<<current_area<<endl;
+                continue ;
+            }
+
+            last_area = current_area;
+            final_index = index_area_vec[i].first;
+
+            cout<<"---aaa---- "<<index_area_vec[i].first<<" pass"<<endl;
+            Point2f mPoints[4];// 左下，左上，右上，右下
+            mRect.points(mPoints);
+            Point points[4];
+            for(int i=0;i<4;i++){
+                points[i].x = (int) mPoints[i].x;
+                points[i].y = (int) mPoints[i].y;
+            }
+            for (int i = 0; i < 4; i++)
+                  line(temp2, mPoints[i], mPoints[(i + 1) % 4], Scalar(0, 0,255), 2);
+
+            imshow("lpe",temp2);
+
+
+        }
+
+
+    }
+
+    if(final_index != 0){
+        // 区域提取
+        RotatedRect fRect = minAreaRect(contours[final_index]);
+        this->orginImg.copyTo(licenceImg);
+        licenceImg = regionalExtract(licenceImg,fRect);
+        imshow("licenceImg",licenceImg);
+        characterExtraction(licenceImg);
+    }
+
+
+    /*
     // 获取所有轮廓
     std::vector<std::vector<Point>> contours;
     findContours(img,contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
@@ -268,7 +484,7 @@ Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
         // 计算轮廓面积
         area = contourArea(*it);
         // 筛选出可能轮廓
-        if(area>800&&area<10000){
+        if(area>800&&area<100000){
             // 获取最小外接矩
             RotatedRect mRect = minAreaRect(*it);
             // 获取四个角点坐标
@@ -296,20 +512,27 @@ Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
             if(checkLicenseFromShape(mLWR,rectRate,area)){
                 std::cout<<"**** pass shape check ****"<<std::endl;
                 // 区域提取
+                this->orginImg.copyTo(licenceImg);
                 licenceImg = regionalExtract(licenceImg,mRect);
+
                 // 根据颜色再次判断
                 if(checkLicenseFromColor(licenceImg)){
-                    std::cout<<"--------draw -------------:"<<i<<std::endl;
+                    std::cout<<"---------------------draw:"<<i<<std::endl;
                     for (int i = 0; i < 4; i++)
                           line(temp2, mPoints[i], mPoints[(i + 1) % 4], Scalar(0, 0,255), 2);
 
                     imshow("lpe",temp2);
+                    Size s(144,33);
+                    resize(licenceImg,licenceImg,s,0,0,INTER_CUBIC);
                     imshow("licenceImg1",licenceImg);
+
+                    //characterExtraction(licenceImg);
+
                 }
 
             }
 
-#if DEBUG_COUT == 1
+#if DEBUG_COUT == 1 
 
             std::cout<<"size: "<<contours.size()<<std::endl;
             std::cout<<"current : "<<i<<" area"<<area<<std::endl;
@@ -327,8 +550,23 @@ Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
             }
 #endif
         }
+#if MY_DEBUG == 0
+        int c = waitKey();
+        if(c == 32){
+            Mat temp = this->orginImg.clone();
+            drawContours(temp,contours,i,Scalar(0,0,255),5);
+            std::cout<<"temp in : "<<i<<std::endl;
+            imshow("temp",temp);
+        }
+#endif
         i++;
     }
+
+
+    */
+
+
+
     return licenceImg;
 }
 
@@ -411,7 +649,7 @@ int LicencePlateRecognition::OTSU(Mat &srcImage)
             }
         }
     }
-    std::cout<<threshold;
+    std::cout<<"otu : "<<threshold<<endl;
     return threshold;
 }
 
@@ -453,5 +691,105 @@ Mat LicencePlateRecognition::rotate_demo(Mat &image,RotatedRect rRect){
     //imshow("crop",licenceImg);
 
     return licenceImg;
+
+}
+
+void LicencePlateRecognition::characterExtraction(Mat img){
+
+    Size s(144,33);
+    resize(img,img,s,0,0,INTER_CUBIC);
+    Mat dst ;
+    bilateralFilter(img,dst,0,100,20);
+   // imwrite("../pic/licence5.jpg",dst);
+
+    imshow("ce0",dst);
+    cvtColor(dst,dst,COLOR_BGR2GRAY);
+
+   // blur(dst,dst,Size(3,3));
+    //imshow("ce1",dst);
+    //equalizeHist(dst,dst);
+    //imshow("ce2",dst);
+
+    threshold(dst,dst,OTSU(dst),255,THRESH_BINARY);
+
+    imshow("ce3",dst);
+
+    Mat element = getStructuringElement(MORPH_RECT,Size(2,1));
+    erode(dst,dst,element);
+
+    imshow("ce",dst);
+
+    // 获取宽度
+    int width = dst.cols;
+    // 获取高度
+    int height = dst.rows;
+
+    int black_num = 0;
+
+    int x1[10];
+    int x2[10];
+    int pos = 0;
+
+    for(int col=0;col<width;col++){
+
+        int white_num = 0;
+
+        for(int row=4;row<30;row++){
+            int px = dst.at<uchar>(row,col);
+            if(px == 255)
+                white_num ++ ;
+        }
+
+        if(white_num > 5){
+            white_num = 0;
+            int flog_num = 0;
+            int ncol = col + 12;
+            int col2 = col;
+            for(col2;col2<=ncol;col2++){
+
+                for(int row=4;row<30;row++){
+                    int px = dst.at<uchar>(row,col2);
+                    if(px == 255){
+                        white_num++;
+                        if(col2 == ncol)
+                            flog_num++;
+                    }
+
+                }
+            }
+            if(white_num > 50 && flog_num < 6){
+
+                x1[pos] = col;
+                x2[pos] = col2;
+                pos++;
+                col = ncol;
+            }
+
+        }
+
+    }
+
+
+  Mat num[10];
+  for(int x=0;x<pos;x++){
+    cout<<"x: "<<x<<" x1: "<<x1[x]<<" x2:"<<x2[x]<<endl;
+
+    float width2 = x2[x] - x1[x];
+    getRectSubPix(dst,Size(width2+4,25),Point2f(x1[x]+width2/2-2,16),num[x],-1);
+
+    char str[3];
+    sprintf(str,"%d",x);
+    std::string name(str);
+    imshow(name,num[x]);
+
+  }
+
+
+
+  // getRectSubPix(dst, rect_size ,center, licenceImg);
+
+   // imwrite("../pic/licence5.jpg",dst);
+
+
 
 }
