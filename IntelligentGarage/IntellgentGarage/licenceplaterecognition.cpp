@@ -869,8 +869,6 @@ void LicencePlateRecognition::characterExtraction(Mat img){
               mlikeRate[p] = bestLike;
           }
 
-         // cout<<"n: "<<n<<" likeRate: "<<likeRate / (20 * 20)<<endl;
-
 
           Mat result;
           Mat rNum;
