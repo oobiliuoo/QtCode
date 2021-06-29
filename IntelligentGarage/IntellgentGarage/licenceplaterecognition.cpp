@@ -474,65 +474,7 @@ Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
 
 
     /*
-    // 获取所有轮廓
-    std::vector<std::vector<Point>> contours;
-    findContours(img,contours,RETR_TREE,CHAIN_APPROX_SIMPLE);
 
-    int i = 0;  // 记录当前轮廓下标
-    // 遍历所有轮廓
-    std::vector<std::vector<Point>>::iterator it;
-    for(it=contours.begin();it!=contours.end();it++)
-    {
-        // 计算轮廓面积
-        area = contourArea(*it);
-        // 筛选出可能轮廓
-        if(area>800&&area<100000){
-            // 获取最小外接矩
-            RotatedRect mRect = minAreaRect(*it);
-            // 获取四个角点坐标
-            Point2f mPoints[4];// 左下，左上，右上，右下
-            mRect.points(mPoints);
-            Point points[4];
-            for(int i=0;i<4;i++){
-                points[i].x = (int) mPoints[i].x;
-                points[i].y = (int) mPoints[i].y;
-            }
-            // 获取长宽
-            Size2f s = mRect.size;
-            height = s.height;
-            weight = s.width;
-
-            // 获取长宽比
-            if(height > weight)
-                mLWR = (float) height / weight;
-            else
-                mLWR = (float) weight / height;
-            // 矩形面积
-            mArea = height * weight;
-            rectRate = area/mArea;
-
-            if(checkLicenseFromShape(mLWR,rectRate,area)){
-                std::cout<<"**** pass shape check ****"<<std::endl;
-                // 区域提取
-                this->orginImg.copyTo(licenceImg);
-                licenceImg = regionalExtract(licenceImg,mRect);
-
-                // 根据颜色再次判断
-                if(checkLicenseFromColor(licenceImg)){
-                    std::cout<<"---------------------draw:"<<i<<std::endl;
-                    for (int i = 0; i < 4; i++)
-                          line(temp2, mPoints[i], mPoints[(i + 1) % 4], Scalar(0, 0,255), 2);
-
-                    imshow("lpe",temp2);
-                    Size s(144,33);
-                    resize(licenceImg,licenceImg,s,0,0,INTER_CUBIC);
-                    imshow("licenceImg1",licenceImg);
-
-                    //characterExtraction(licenceImg);
-
-                }
-
-            }
 
 #if DEBUG_COUT == 1 
 
