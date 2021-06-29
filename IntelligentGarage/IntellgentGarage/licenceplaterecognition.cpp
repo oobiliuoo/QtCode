@@ -1,4 +1,6 @@
 #include "licenceplaterecognition.h"
+#include "QString"
+
 #define SOBEL_TYPE 1
 #define DEBUG_COUT 1
 #define MY_DEBUG 1
@@ -649,7 +651,7 @@ int LicencePlateRecognition::OTSU(Mat &srcImage)
             }
         }
     }
-    std::cout<<"otu : "<<threshold<<endl;
+   // std::cout<<"otu : "<<threshold<<endl;
     return threshold;
 }
 
@@ -698,19 +700,25 @@ void LicencePlateRecognition::characterExtraction(Mat img){
 
     Size s(144,33);
     resize(img,img,s,0,0,INTER_CUBIC);
+
     Mat dst ;
-    bilateralFilter(img,dst,0,100,20);
+   // GaussianBlur(img,dst,Size(3,3),0,0,BORDER_DEFAULT);
+    bilateralFilter(img,dst,0,100,10);
    // imwrite("../pic/licence5.jpg",dst);
 
-    imshow("ce0",dst);
+    Mat srcImg = dst.clone();
+    imshow("srcIg",srcImg);
+   // imshow("ce0",dst);
     cvtColor(dst,dst,COLOR_BGR2GRAY);
-
    // blur(dst,dst,Size(3,3));
-    //imshow("ce1",dst);
+    imshow("ce1",dst);
     //equalizeHist(dst,dst);
     //imshow("ce2",dst);
 
+    Mat gray = dst.clone();
+    int sold = OTSU(dst);
     threshold(dst,dst,OTSU(dst),255,THRESH_BINARY);
+    //threshold(dst,dst,0,255,THRESH_OTSU);
 
     imshow("ce3",dst);
 
@@ -746,7 +754,6 @@ void LicencePlateRecognition::characterExtraction(Mat img){
             int ncol = col + 12;
             int col2 = col;
             for(col2;col2<=ncol;col2++){
-
                 for(int row=4;row<30;row++){
                     int px = dst.at<uchar>(row,col2);
                     if(px == 255){
@@ -759,10 +766,10 @@ void LicencePlateRecognition::characterExtraction(Mat img){
             }
             if(white_num > 50 && flog_num < 6){
 
-                x1[pos] = col;
+                x1[pos] = col - 3;
                 x2[pos] = col2;
                 pos++;
-                col = ncol;
+                col = ncol ;
             }
 
         }
@@ -775,9 +782,15 @@ void LicencePlateRecognition::characterExtraction(Mat img){
     cout<<"x: "<<x<<" x1: "<<x1[x]<<" x2:"<<x2[x]<<endl;
 
     float width2 = x2[x] - x1[x];
-    getRectSubPix(dst,Size(width2+4,25),Point2f(x1[x]+width2/2-2,16),num[x],-1);
+    imshow("gray123",gray);
+    getRectSubPix(dst,Size(width2,25),Point2f(x1[x]+width2/2,16),num[x],-1);
+    //GaussianBlur(num[x],num[x],Size(3,3),0,0,BORDER_DEFAULT);
+    threshold(num[x],num[x],0,255,THRESH_OTSU);
+
+   // imshow("dstasdad",);
 
     char str[3];
+
     sprintf(str,"%d",x);
     std::string name(str);
     imshow(name,num[x]);
@@ -785,11 +798,110 @@ void LicencePlateRecognition::characterExtraction(Mat img){
   }
 
 
+  // char(['0':'9' 'A':'H' 'J':'N' 'P':'Z' 34:z 35 '藏川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙'])
 
-  // getRectSubPix(dst, rect_size ,center, licenceImg);
+  /*
+  char cnum[200] = {'0','1','2','3','4','5','6','7','8','9'
+                   ,'A','B','C','D','E','F','G','H','J','K','L','M','N','P','Q','R','S','T','U','V','W','X','Y','Z'
+                   ,'藏','川','鄂','甘','赣','桂','贵','黑','沪','吉','冀','津','晋','京','辽','鲁','蒙','闽','宁','青'
+                   ,'琼','陕','苏','皖','湘','新','渝','豫','粤','云','浙'};
+  */
 
-   // imwrite("../pic/licence5.jpg",dst);
+ // char cnum1[2] = {'藏','a'};
 
+  string cnum[200] = {"0","1","2","3","4","5","6","7","8","9"
+                   ,"A","B","C","D","E","F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","X","Y","Z"
+                   ,"藏","川","鄂","甘","赣","桂","贵","黑","沪","吉","冀","津","晋","京","辽","鲁","蒙","闽","宁","青"
+                   ,"琼","陕","苏","皖","湘","新","渝","豫","粤","云","浙"};
+ // string cnum1[100] = {"藏","川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙"};
+  //QString carnum1 = "藏川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙";
+  cout<<"asd  "<<cnum[34]<<endl;
+ // string tt = "藏川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙";
+
+  //char tt = '浙';
+
+  std::string path = "../train1/licence_plate_";
+  char pathNum[3];
+  char fileNum[3];
+  std::string type = ".jpg";
+  std::string srcPath ;
+  double mlikeRate[65];
+
+  float theBest[65][2] = {0};
+
+  for(int p = 34;p<65;p++){
+
+      string strPathName = cnum[p];
+
+      double bestLike = 0;
+      float avgLike = 0;
+      float sumLike = 0;
+
+
+      for(int n=1;n<10;n++){
+
+          string strFileName = cnum[p] + "_ ";
+          sprintf(fileNum,"%d",n);
+          std::string FileName(fileNum);
+          strFileName += FileName;
+          srcPath = path + strPathName +"/"+ strFileName + type;
+          cout<<"path: "<<srcPath<<endl;
+          Mat train8 = imread(srcPath);
+          cvtColor(train8,train8,COLOR_BGR2GRAY);
+         // cv::resize(train8,train8,Size(16,25),0,0,INTER_CUBIC);
+          threshold(train8,train8,0,255,THRESH_OTSU);
+         // imshow("train8",train8);
+
+          double likeRate = 0;
+          for(int x = 0;x<20;x++){
+              for(int y=0;y<20;y++){
+                  int px1 = num[0].at<uchar>(x,y);
+                  int px2 = train8.at<uchar>(x,y);
+                  if(px1 == px2 && px1 == 255){
+                      likeRate++;
+                  }
+
+              }
+          }
+
+          if(bestLike < likeRate){
+              bestLike = likeRate;
+              mlikeRate[p] = bestLike;
+          }
+
+         // cout<<"n: "<<n<<" likeRate: "<<likeRate / (20 * 20)<<endl;
+
+
+          Mat result;
+          Mat rNum;
+          cv::resize(num[0],rNum,train8.size());
+          matchTemplate(rNum,train8,result,TM_CCOEFF);
+        //  cout<<"result"<<result<<endl;
+          if(theBest[p][0]<result.at<float>(0,0)){
+              theBest[p][0] = result.at<float>(0,0);
+              //cout<<"asd"<<result.at<float>(0,0)<<endl;
+          }
+      sumLike += result.at<float>(0,0);
+      }
+
+      avgLike = sumLike / 10;
+      cout<<"p: "<<p<<"bestlike: "<<mlikeRate[p] / (20 * 20)<<endl;
+      cout<<"p: "<<p<<"---------- avglike: "<<avgLike<<endl;
+
+  }
+
+  int bestNum = 0;
+  float temp2=0;
+  for(int i=34;i<65;i++){
+      cout<<"p: "<<i<<"--newLike--："<<theBest[i][0]<<endl;
+      if(temp2 < theBest[i][0]){
+          bestNum = i;
+          temp2 = theBest[i][0];
+      }
+  }
+
+  cout<<"the best num: "<<bestNum<<endl;
+  cout<<"the province: "<<cnum[bestNum]<<endl;
 
 
 }

@@ -8,17 +8,17 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-#if MY_DEBUG == 1
+#if MY_DEBUG == 0
 
     // 读取图片
-    this->originImg = imread("../pic/carnum6.jpg");
+    this->originImg = imread("../pic/carnum4.jpg");
     imshow("originImg",this->originImg);
     if (this->originImg.cols != 640)
             cv::resize(this->originImg, this->originImg, Size(640, 640 * this->originImg.rows / this->originImg.cols));
     Mat srcImg = this->originImg.clone();
     test(srcImg);
 
-#elif MY_DEBUG == 0
+#elif MY_DEBUG == 1
     test2();
 
 #elif MY_DEBUG == 0
@@ -31,7 +31,7 @@ void MainWindow::test2(){
     std::string path = "../pic/carnum";
     std::string type = ".jpg";
     std::string srcPath ;
-    int l = 13;
+    int l = 16;
     Mat img;
     for(int i=1;i<l;i++){
         char num[3];
