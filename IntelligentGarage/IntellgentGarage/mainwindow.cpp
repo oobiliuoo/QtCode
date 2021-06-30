@@ -8,6 +8,13 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // 实例化 init
+    server = new QTcpServer(this);
+    // 监听 第一个为IP地址 第二个为端口号
+    server->listen(QHostAddress("192.168.43.131"),8080);
+    // 新的连接 收到一个newConnection信号 处理函数采用lamda表达式
+    connect(server,&QTcpServer::newConnection,this,&MainWindow::mConnect);
+
 #if MY_DEBUG == 0
 
     // 读取图片
@@ -18,7 +25,7 @@ MainWindow::MainWindow(QWidget *parent) :
     Mat srcImg = this->originImg.clone();
     test(srcImg);
 
-#elif MY_DEBUG == 1
+#elif MY_DEBUG == 0
     test2();
 
 #elif MY_DEBUG == 0
@@ -101,4 +108,36 @@ MainWindow::~MainWindow()
 }
 
 
+void MainWindow::mConnect(){
+    // 接收客户端的连接对象 相当与 accept
+    // sock_addr 结构体 == 类 QTcpSocket
+    conn = server->nextPendingConnection();
+    std::cout<<"有新的连接...："<<std::endl;
+
+    // 保证conn是一个有效对象，所以写在里面
+    connect(conn,&QTcpSocket::readyRead,this,&MainWindow::readMsg);
+}
+
+void MainWindow::readMsg(){
+    // 接收数据
+    QByteArray array = conn->readAll();
+  //  ui->record->append(array);
+    std::string msg = array.toStdString();
+    std::cout<<"收到数据："<<msg<<std::endl;
+}
+
+void MainWindow::sendMsg(QString msg){
+    // 发送数据 toPlainText 将文本框内容转换为纯字符串
+    if(!msg.isEmpty() && !msg.isNull()){
+        conn->write(msg.toUtf8().data());
+        std::cout<<"发送："<<msg.toStdString()<<std::endl;
+    }
+}
+
+
+void MainWindow::on_btn_door_clicked()
+{
+    QString msg = "btnDoor onclick";
+    sendMsg(msg);
+}
 

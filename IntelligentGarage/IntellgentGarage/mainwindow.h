@@ -3,6 +3,9 @@
 
 #include <QMainWindow>
 #include "licenceplaterecognition.h"
+#include <QTcpServer>
+#include <QTcpSocket>
+
 typedef LicencePlateRecognition LPR;
 
 namespace Ui {
@@ -20,14 +23,28 @@ public:
     void test(cv::Mat);
     void test2();
 
+
+    void mConnect();
+
+    void readMsg();
+
+    void sendMsg(QString msg);
+
     // 摄像头
     void readVideo();
 
+
+
+private slots:
+    void on_btn_door_clicked();
 
 private:
     Ui::MainWindow *ui;
     // 原图
     Mat originImg;
+    QTcpServer *server;     //监听套接字
+    QTcpSocket *conn;       //通信套接字
 };
 
 #endif // MAINWINDOW_H
+
