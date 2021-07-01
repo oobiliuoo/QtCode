@@ -8,24 +8,20 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-    // 实例化 init
-    server = new QTcpServer(this);
-    // 监听 第一个为IP地址 第二个为端口号
-    server->listen(QHostAddress("192.168.43.131"),8080);
-    // 新的连接 收到一个newConnection信号 处理函数采用lamda表达式
-    connect(server,&QTcpServer::newConnection,this,&MainWindow::mConnect);
+  //  initNet();
+
 
 #if MY_DEBUG == 0
 
     // 读取图片
-    this->originImg = imread("../pic/carnum4.jpg");
+    this->originImg = imread("../pic/carnum3.jpg");
     imshow("originImg",this->originImg);
     if (this->originImg.cols != 640)
             cv::resize(this->originImg, this->originImg, Size(640, 640 * this->originImg.rows / this->originImg.cols));
     Mat srcImg = this->originImg.clone();
     test(srcImg);
 
-#elif MY_DEBUG == 0
+#elif MY_DEBUG == 1
     test2();
 
 #elif MY_DEBUG == 0
@@ -35,6 +31,25 @@ MainWindow::MainWindow(QWidget *parent) :
 
 void MainWindow::test2(){
 
+
+    QString mFolderPath ="../pic";
+    QStringList mImgNames = getFileNames(mFolderPath);
+    for (int i = 0; i < mImgNames.size(); ++i)
+    {
+        qDebug() << "entryList: " << i << "-" << mImgNames[i];
+        QString temp = mImgNames[i];
+        std::string srcPath = mFolderPath.toStdString() +"/" + temp.toStdString();
+        Mat img = imread(srcPath);
+        if (img.cols != 640)
+                cv::resize(img, img, Size(680, 480));
+
+        imshow("test111",img);
+        test(img);
+        cv::waitKey();
+
+    }
+
+    /*
     std::string path = "../pic/carnum";
     std::string type = ".jpg";
     std::string srcPath ;
@@ -48,13 +63,14 @@ void MainWindow::test2(){
         std::cout<<"//--------**  "<<srcPath<<"  **-----------//"<<std::endl;
         img = imread(srcPath);
         if (img.cols != 640)
-                cv::resize(img, img, Size(640, 640 * img.rows / img.cols));
+                cv::resize(img, img, Size(680, 480));
 
         imshow("test111",img);
         test(img);
         cv::waitKey();
     }
 
+    */
 }
 
 void MainWindow::test(Mat srcImg){
@@ -107,6 +123,14 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::initNet(){
+    // 实例化 init
+    server = new QTcpServer(this);
+    // 监听 第一个为IP地址 第二个为端口号
+    server->listen(QHostAddress("192.168.43.131"),8080);
+    // 新的连接 收到一个newConnection信号 处理函数采用lamda表达式
+    connect(server,&QTcpServer::newConnection,this,&MainWindow::mConnect);
+}
 
 void MainWindow::mConnect(){
     // 接收客户端的连接对象 相当与 accept
@@ -141,3 +165,17 @@ void MainWindow::on_btn_door_clicked()
     sendMsg(msg);
 }
 
+QStringList MainWindow::getFileNames(const QString &path)
+{
+    QStringList mImgNames = {""};
+    QString mFolderPath =path;
+    if (mFolderPath.isEmpty()) return mImgNames;
+    // 获取所有文件名
+    QDir dir(mFolderPath);
+    if (!dir.exists()) mImgNames = QStringList("");
+    dir.setFilter(QDir::Files);
+    dir.setSorting(QDir::Name);
+    dir.setNameFilters(QString("*.jpg").split(";"));
+    mImgNames = dir.entryList();
+    return mImgNames;
+}

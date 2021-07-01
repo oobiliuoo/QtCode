@@ -39,10 +39,17 @@ public:
     void regionalExtract2(Mat &img);
 
     void characterExtraction(Mat img);
+    void characterExtraction2(Mat img);
 
     int OTSU(cv::Mat &srcImage);
     cv::Mat rotate_demo(Mat &image,cv::RotatedRect rRect);
 
+
+private:
+    void characterPicProcessing( Mat &img);
+    void characterDivision( Mat& img);
+    void characterChineseDiscern(Mat &img);
+    void characterOtherDiscern(Mat &img);
 public:
     Mat srcImg ;
     Mat orginImg ;
