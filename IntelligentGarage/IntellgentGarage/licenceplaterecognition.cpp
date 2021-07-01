@@ -231,32 +231,39 @@ Mat LicencePlateRecognition::regionalExtract(Mat &img,  RotatedRect rRect){
         points[i].x = (int) mPoints[i].x;
         points[i].y = (int) mPoints[i].y;
     }
-    const static int KD = 5;
-    points[0].x = (int) mPoints.x - KD;
-    points[0].y = (int) mPoints.y - KD;
 
-
-    fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
-   // imshow("mask",mask);
-    Mat t ;
-    img.copyTo(t,mask);
     //imshow("t",t);
     float ff = 90;
     std::cout<<"angle"<<rRect.angle<<std::endl;
     // 判断是否需要旋转
     if(abs(abs(rRect.angle) - ff) < 5 ){
+        fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
+
+        imshow("mask",mask);
+        Mat element  = getStructuringElement(MORPH_RECT,Size(17,17));
+        dilate(mask,mask,element);
+        imshow("mask2",mask);
+        Mat t1 ;
+        img.copyTo(t1,mask);
         // 始终保持宽 > 高
         Size rect_size = rRect.size;
+        rect_size.width += 10;
+        rect_size.height += 10;
         if (rect_size.width < rect_size.height) {
             swap(rect_size.width, rect_size.height);
         }
         std::cout<<"sub"<<std::endl;
-        getRectSubPix(t,rect_size,rRect.center,licenceImg);
+        getRectSubPix(t1,rect_size,rRect.center,licenceImg);
     }else{
+        fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
+        imshow("mask",mask);
+        Mat t1 ;
+        img.copyTo(t1,mask);
+
         std::cout<<"rotate"<<std::endl;
-        licenceImg =  rotate_demo(t,rRect);
+        licenceImg =  rotate_demo(t1,rRect);
     }
-   // imshow("licenceImg",licenceImg);
+    imshow("licenceImg",licenceImg);
 
 
     return licenceImg;
@@ -643,6 +650,8 @@ Mat LicencePlateRecognition::rotate_demo(Mat &image,RotatedRect rRect){
     Mat licenceImg;
     // 始终保持宽 > 高
     Size rect_size = rRect.size;
+    rect_size.width += 5;
+    rect_size.height += 5;
     if (rect_size.width < rect_size.height) {
         swap(rect_size.width, rect_size.height);
     }
@@ -863,6 +872,56 @@ void LicencePlateRecognition::characterPicProcessing(Mat &img){
     imshow("cpp1",dst);
     threshold(dst,dst,0,255,THRESH_OTSU);
     imshow("cpp2",dst);
+
+    int rows = dst.rows;
+    int cols = dst.cols;
+
+    int rowPoint[rows] = {0};
+    for(int i=0;i<rows;i++){
+        for(int j=0;j<cols;j++){
+            if(dst.at<uchar>(i,j) == 255)
+                rowPoint[i]++;
+        }
+    }
+
+    int colPoint[cols] = {0};
+    for(int i=0;i<cols;i++){
+        for(int j=0;j<rows;j++){
+            if(dst.at<uchar>(i,j) == 255)
+                colPoint[i]++;
+        }
+    }
+
+    int tempsum=0;
+    for(int i=0;i<rows;i++){
+        tempsum += rowPoint[i];
+    }
+    int rowAvg = tempsum / rows;
+
+    tempsum = 0;
+    for(int i=0;i<cols;i++){
+        tempsum += colPoint[i];
+    }
+    int colAvg = tempsum / cols;
+
+    cout<<"rowavg: "<<rowAvg<<" colavg:"<<colAvg<<std::endl;
+
+    for(int i=rows-1;i>0;i--){
+
+        if(rowPoint[i] > rowAvg && i>(rows - rows/5)){
+
+            for(int j=0;j<cols;j++){
+                // 消除目标行以下
+                // 向上找10格
+                    dst.at<uchar>(i,j) = 0;
+            }
+        }
+
+
+    }
+
+    imshow("cpp3",dst);
+
 
 }
 

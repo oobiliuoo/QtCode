@@ -8,7 +8,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
 
-  //  initNet();
+    initNet();
 
 
 #if MY_DEBUG == 0
@@ -21,7 +21,7 @@ MainWindow::MainWindow(QWidget *parent) :
     Mat srcImg = this->originImg.clone();
     test(srcImg);
 
-#elif MY_DEBUG == 1
+#elif MY_DEBUG == 0
     test2();
 
 #elif MY_DEBUG == 0
@@ -148,6 +148,10 @@ void MainWindow::readMsg(){
   //  ui->record->append(array);
     std::string msg = array.toStdString();
     std::cout<<"收到数据："<<msg<<std::endl;
+
+    handMsg(msg);
+
+
 }
 
 void MainWindow::sendMsg(QString msg){
@@ -163,6 +167,46 @@ void MainWindow::on_btn_door_clicked()
 {
     QString msg = "btnDoor onclick";
     sendMsg(msg);
+}
+
+
+void MainWindow::handMsg(std::string msg){
+
+    if(msg==LED_0_ON){
+       ui->label_led_0_states->setText("ON");
+       ui->btn_led_0->setText("关灯");
+    }
+    if(msg==LED_0_OFF){
+       ui->label_led_0_states->setText("OFF");
+       ui->btn_led_0->setText("开灯");
+    }
+
+    if(msg==LED_1_ON){
+       ui->label_led_1_states->setText("ON");
+       ui->btn_led_1->setText("关灯");
+    }
+    if(msg==LED_1_OFF){
+       ui->label_led_1_states->setText("OFF");
+       ui->btn_led_1->setText("开灯");
+    }
+
+    if(msg==DOOR_OPEN){
+       ui->label_door_states->setText("开");
+       ui->btn_door->setText("关门");
+    }
+    if(msg==DOOR_CLOSE){
+       ui->label_door_states->setText("关");
+       ui->btn_door->setText("开门");
+    }
+
+    if(msg==WARING_OPEN){
+       ui->btn_waring->setText("关闭警告");
+    }
+    if(msg==WARING_CLOSE){
+       ui->btn_waring->setText("警告");
+    }
+
+
 }
 
 QStringList MainWindow::getFileNames(const QString &path)

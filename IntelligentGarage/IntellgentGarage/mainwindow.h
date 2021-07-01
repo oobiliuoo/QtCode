@@ -6,6 +6,7 @@
 #include <QTcpServer>
 #include <QTcpSocket>
 #include <QFileDialog>
+#include "mymsg.h"
 
 
 typedef LicencePlateRecognition LPR;
@@ -30,6 +31,9 @@ public:
     void mConnect();
     void readMsg();
     void sendMsg(QString msg);
+    void handMsg(std::string msg);
+
+
 
     //摄像头
     void readVideo();
