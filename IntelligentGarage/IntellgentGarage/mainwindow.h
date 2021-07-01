@@ -5,6 +5,9 @@
 #include "licenceplaterecognition.h"
 #include <QTcpServer>
 #include <QTcpSocket>
+#include <QFileDialog>
+#include "mymsg.h"
+
 
 typedef LicencePlateRecognition LPR;
 
@@ -23,16 +26,19 @@ public:
     void test(cv::Mat);
     void test2();
 
-
+    //Tcp server--------
+    void initNet();
     void mConnect();
-
     void readMsg();
-
     void sendMsg(QString msg);
+    void handMsg(std::string msg);
 
-    // 摄像头
+
+
+    //摄像头
     void readVideo();
 
+    QStringList getFileNames(const QString &path);
 
 
 private slots:

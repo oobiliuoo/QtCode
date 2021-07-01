@@ -30,7 +30,8 @@ SOURCES += \
 
 HEADERS += \
         mainwindow.h \
-    licenceplaterecognition.h
+    licenceplaterecognition.h \
+    mymsg.h
 
 FORMS += \
         mainwindow.ui

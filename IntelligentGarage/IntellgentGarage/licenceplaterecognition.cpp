@@ -99,11 +99,11 @@ void LicencePlateRecognition::borderDetection(Mat &img ){
     Sobel(img,sobelImg,CV_16S,0,1,3);
     convertScaleAbs(sobelImg,sobelY);
 
-    addWeighted(sobelX,0.7,sobelY,0.3,0,img);
+    addWeighted(sobelX,0.5,sobelY,0.3,0,img);
 #endif
     this->srcImg = img;
     // SHOW_ONE 2
-#if SHOW_ALL == 1 || SHOW_ONE == 1
+#if SHOW_ALL == 1 || SHOW_ONE == 0
     imshow("sobel",img);
 #endif
 }
@@ -127,12 +127,28 @@ void LicencePlateRecognition::borderDetection(){
 void LicencePlateRecognition::morphologicalProcessing(Mat &img){
     // 二值化操作
     threshold(img,img,OTSU(img),255,THRESH_BINARY);
-    //imshow("img7", img);
+    imshow("img7", img);
     // 形态学处理
     // 闭运算:
 
+
     Mat element  = getStructuringElement(MORPH_RECT,Size(17,5));
     morphologyEx(img,img,MORPH_CLOSE,element);
+    imshow("img8", img);
+
+
+/*
+    Mat element  = getStructuringElement(MORPH_RECT,Size(9,9));
+    morphologyEx(img,img,MORPH_CLOSE,element);
+    imshow("img8", img);
+    Mat element2  = getStructuringElement(MORPH_RECT,Size(23,23));
+    morphologyEx(img,img,MORPH_OPEN,element2);
+    imshow("img9",img);
+
+    Mat element3  = getStructuringElement(MORPH_RECT,Size(23,3));
+    dilate(img,img,element3);
+    imshow("img10",img);
+*/
     /*
     Mat element1  = getStructuringElement(MORPH_RECT,Size(3,3));
     erode(img,img,element1);
@@ -215,27 +231,39 @@ Mat LicencePlateRecognition::regionalExtract(Mat &img,  RotatedRect rRect){
         points[i].x = (int) mPoints[i].x;
         points[i].y = (int) mPoints[i].y;
     }
-    fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
-   // imshow("mask",mask);
-    Mat t ;
-    img.copyTo(t,mask);
+
     //imshow("t",t);
     float ff = 90;
     std::cout<<"angle"<<rRect.angle<<std::endl;
     // 判断是否需要旋转
     if(abs(abs(rRect.angle) - ff) < 5 ){
+        fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
+
+        imshow("mask",mask);
+        Mat element  = getStructuringElement(MORPH_RECT,Size(17,17));
+        dilate(mask,mask,element);
+        imshow("mask2",mask);
+        Mat t1 ;
+        img.copyTo(t1,mask);
         // 始终保持宽 > 高
         Size rect_size = rRect.size;
+        rect_size.width += 10;
+        rect_size.height += 10;
         if (rect_size.width < rect_size.height) {
             swap(rect_size.width, rect_size.height);
         }
         std::cout<<"sub"<<std::endl;
-        getRectSubPix(t,rect_size,rRect.center,licenceImg);
+        getRectSubPix(t1,rect_size,rRect.center,licenceImg);
     }else{
+        fillConvexPoly(mask,points,4,Scalar(255,255,255),LINE_AA);
+        imshow("mask",mask);
+        Mat t1 ;
+        img.copyTo(t1,mask);
+
         std::cout<<"rotate"<<std::endl;
-        licenceImg =  rotate_demo(t,rRect);
+        licenceImg =  rotate_demo(t1,rRect);
     }
-   // imshow("licenceImg",licenceImg);
+    imshow("licenceImg",licenceImg);
 
 
     return licenceImg;
@@ -469,9 +497,8 @@ Mat LicencePlateRecognition::licensePlateExtraction(Mat &img){
         this->orginImg.copyTo(licenceImg);
         licenceImg = regionalExtract(licenceImg,fRect);
         imshow("licenceImg",licenceImg);
-        characterExtraction(licenceImg);
+        characterExtraction2(licenceImg);
     }
-
 
     /*
 
@@ -623,6 +650,8 @@ Mat LicencePlateRecognition::rotate_demo(Mat &image,RotatedRect rRect){
     Mat licenceImg;
     // 始终保持宽 > 高
     Size rect_size = rRect.size;
+    rect_size.width += 5;
+    rect_size.height += 5;
     if (rect_size.width < rect_size.height) {
         swap(rect_size.width, rect_size.height);
     }
@@ -640,6 +669,7 @@ Mat LicencePlateRecognition::rotate_demo(Mat &image,RotatedRect rRect){
 
 void LicencePlateRecognition::characterExtraction(Mat img){
 
+    //-------------------图像处理----------------------
     Size s(144,33);
     resize(img,img,s,0,0,INTER_CUBIC);
 
@@ -648,8 +678,6 @@ void LicencePlateRecognition::characterExtraction(Mat img){
     bilateralFilter(img,dst,0,100,10);
    // imwrite("../pic/licence5.jpg",dst);
 
-    Mat srcImg = dst.clone();
-    imshow("srcIg",srcImg);
    // imshow("ce0",dst);
     cvtColor(dst,dst,COLOR_BGR2GRAY);
    // blur(dst,dst,Size(3,3));
@@ -668,7 +696,7 @@ void LicencePlateRecognition::characterExtraction(Mat img){
     erode(dst,dst,element);
 
     imshow("ce",dst);
-
+    //-----------------字符分割-------------
     // 获取宽度
     int width = dst.cols;
     // 获取高度
@@ -707,7 +735,6 @@ void LicencePlateRecognition::characterExtraction(Mat img){
                 }
             }
             if(white_num > 50 && flog_num < 6){
-
                 x1[pos] = col - 3;
                 x2[pos] = col2;
                 pos++;
@@ -732,15 +759,13 @@ void LicencePlateRecognition::characterExtraction(Mat img){
    // imshow("dstasdad",);
 
     char str[3];
-
     sprintf(str,"%d",x);
     std::string name(str);
     imshow(name,num[x]);
 
   }
 
-
-  // char(['0':'9' 'A':'H' 'J':'N' 'P':'Z' 34:z 35 '藏川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙'])
+  //-----------------字符识别------------------------
 
   /*
   char cnum[200] = {'0','1','2','3','4','5','6','7','8','9'
@@ -749,18 +774,11 @@ void LicencePlateRecognition::characterExtraction(Mat img){
                    ,'琼','陕','苏','皖','湘','新','渝','豫','粤','云','浙'};
   */
 
- // char cnum1[2] = {'藏','a'};
 
   string cnum[200] = {"0","1","2","3","4","5","6","7","8","9"
                    ,"A","B","C","D","E","F","G","H","J","K","L","M","N","P","Q","R","S","T","U","V","W","X","Y","Z"
                    ,"藏","川","鄂","甘","赣","桂","贵","黑","沪","吉","冀","津","晋","京","辽","鲁","蒙","闽","宁","青"
                    ,"琼","陕","苏","皖","湘","新","渝","豫","粤","云","浙"};
- // string cnum1[100] = {"藏","川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙"};
-  //QString carnum1 = "藏川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙";
-  cout<<"asd  "<<cnum[34]<<endl;
- // string tt = "藏川鄂甘赣桂贵黑沪吉冀津晋京辽鲁蒙闽宁青琼陕苏皖湘新渝豫粤云浙";
-
-  //char tt = '浙';
 
   std::string path = "../train1/licence_plate_";
   char pathNum[3];
@@ -781,7 +799,6 @@ void LicencePlateRecognition::characterExtraction(Mat img){
 
 
       for(int n=1;n<10;n++){
-
           string strFileName = cnum[p] + "_ ";
           sprintf(fileNum,"%d",n);
           std::string FileName(fileNum);
@@ -802,15 +819,12 @@ void LicencePlateRecognition::characterExtraction(Mat img){
                   if(px1 == px2 && px1 == 255){
                       likeRate++;
                   }
-
               }
           }
-
           if(bestLike < likeRate){
               bestLike = likeRate;
               mlikeRate[p] = bestLike;
           }
-
 
           Mat result;
           Mat rNum;
@@ -842,6 +856,76 @@ void LicencePlateRecognition::characterExtraction(Mat img){
 
   cout<<"the best num: "<<bestNum<<endl;
   cout<<"the province: "<<cnum[bestNum]<<endl;
+
+
+}
+
+void LicencePlateRecognition::characterExtraction2(Mat img){
+    characterPicProcessing(img);
+}
+
+void LicencePlateRecognition::characterPicProcessing(Mat &img){
+    //Size s(144,33);
+    //resize(img,img,s,0,0,INTER_CUBIC);
+    Mat dst;
+    cvtColor(img,dst,COLOR_BGR2GRAY);
+    imshow("cpp1",dst);
+    threshold(dst,dst,0,255,THRESH_OTSU);
+    imshow("cpp2",dst);
+
+    int rows = dst.rows;
+    int cols = dst.cols;
+
+    int rowPoint[rows] = {0};
+    for(int i=0;i<rows;i++){
+        for(int j=0;j<cols;j++){
+            if(dst.at<uchar>(i,j) == 255)
+                rowPoint[i]++;
+        }
+    }
+
+    int colPoint[cols] = {0};
+    for(int i=0;i<cols;i++){
+        for(int j=0;j<rows;j++){
+            if(dst.at<uchar>(i,j) == 255)
+                colPoint[i]++;
+        }
+    }
+
+    int tempsum=0;
+    for(int i=0;i<rows;i++){
+        tempsum += rowPoint[i];
+    }
+    int rowAvg = tempsum / rows;
+
+    tempsum = 0;
+    for(int i=0;i<cols;i++){
+        tempsum += colPoint[i];
+    }
+    int colAvg = tempsum / cols;
+
+    cout<<"rowavg: "<<rowAvg<<" colavg:"<<colAvg<<std::endl;
+
+    for(int i=rows-1;i>0;i--){
+
+        if(rowPoint[i] > rowAvg && i>(rows - rows/5)){
+
+            for(int j=0;j<cols;j++){
+                // 消除目标行以下
+                // 向上找10格
+                    dst.at<uchar>(i,j) = 0;
+            }
+        }
+
+
+    }
+
+    imshow("cpp3",dst);
+
+
+}
+
+void LicencePlateRecognition::characterDivision(Mat &img){
 
 
 }
